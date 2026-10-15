@@ -1,0 +1,240 @@
+###############################################################################################################################################
+# FRUnet processing code was build with python 3.6, and Keras 1.2.2. 
+# To simplify the number of steps and write easy to follow instructions, it is assumed that the user installed python through anaconda.
+# Internet conection is required to set up a proper environment. 
+# The code can be used in Windows and Linux. Each step should be followed in either Linux Terminal or Windows Anaconda Terminal (specified as (Anaconda Prompt Windows) along the instructions whenever it differs from Linux). 
+
+# Summary of the steps to follow:
+# 1.- Create a new python environment. Once it is activated, any package can be (un)installed preventing from outcomes in the system.
+# 2.- The environment is set up with the required versions.
+# 3.- Addapt the script to user's paths.
+# 4.- Run "process_newimages_frunet.py".
+
+# Please, contact esgomezm@pa.uc3m.es for any question regarding the implementation or the set up.
+###############################################################################################################################################
+
+# The folder FRU_processing contains three different subfolders:
+
+# code:
+#  - functions.py - script containing all the functions to process new images.
+#  - process_images.py - script to process the new images contained in any of the folders 'data/dataset_01', 'data/dataset_02' or 'data/dataset_03'.
+#  - fully_residual_dropout_segmentation.h5 - trained Fully Residual Network with Datasets 01 and 02.
+#  - fully_residual_dropout_segmentation_03_04.h5 - trained Fully Residual Network with Datasets 02 and 03.
+#  - fully_residual_dropout_segmentation_01_04.h5 - trained Fully Residual Network with Datasets 01 and 03.
+#  - fully_residual_dropout_segmentation_03_nonoverfit.h5 - trained Fully Residual Network with Datasets 02.
+#  - unet_dropout_segmentation.h5 - trained U-net with Datasets 01 and 02.
+#  - unet_segmentation_3_4_reduce_learning_rate_400.h5 - trained U-net with Datasets 02 and 03.
+#  - unet_segmentation_1_4_reduce_learning_rate_400.h5 - trained U-net with Datasets 01 and 03.
+#  - README - guidelines to use the code.
+#  - stable-req.txt: a list of all the packages contained in a well set up environment.
+
+# data:
+#  - dataset_01: Dataset 1 in the main manuscript
+#  - dataset_02: Dataset 2 in the main manuscript
+#  - dataset_03: Dataset 3 in the main manuscript
+# All images are in '.tif' format.
+# 'resoultion.xlsx' - Excel file with the pixel size in nanometers (resolution) of each of the images. 
+# The name of the images and the format of resoultion.xlsx should always be the same. 
+
+# fru_results: the folder where the new results are stored. 
+
+###############################################################################################################################################
+
+# 0. Install anaconda.
+#--------------------------------------------------------------------------------------------------
+# Download and install anaconda from https://www.anaconda.com/download/
+
+# Please, install Python 3 version (at this moment it would be Python 3.7).
+
+
+# 1.- Create a new envrionment.
+# Find help: https://conda.io/docs/user-guide/tasks/manage-environments.html#
+#--------------------------------------------------------------------------------------------------
+
+## Open Linux Terminal (or Windows Anaconda Terminal) and create a new environment with the name 'your_new_env' by typing:
+
+conda create -n your_new_env python=3.7 anaconda
+
+#(Anaconda Prompt Windows):
+	# conda create -n your_new_env python=3.7 anaconda 
+
+## Type 'y' whenever it is asked: >> Proceed ([y]/n)? y
+ 
+## Activate the new environment by typing:
+
+source activate your_new_env
+
+#(Anaconda Prompt Windows):
+	# conda activate your_new_env 
+
+## To deactivate the environment type:
+
+source deactivate
+
+#(Anaconda Prompt Windows):
+	# conda deactivate 
+
+## To eliminate the environment type:
+
+conda remove -name your_new_env --all
+
+#(Anaconda Prompt Windows):
+	# conda remove -name your_new_env --all
+
+# 2.- Set up the new environment.
+#--------------------------------------------------------------------------------------------------
+## Activate the new environment by typing:
+
+source activate your_new_env
+
+#(Anaconda Prompt Windows):
+	# conda activate your_new_env 
+
+## Install the correct version of keras by typing:
+
+conda install -c conda-forge keras==1.2.2 tensorflow
+
+#(Anaconda Prompt Windows):
+	# pip install --upgrade keras==1.2.2 tensorflow 
+
+## Type 'y' whenever it is asked: >> Proceed ([y]/n)? y
+
+## Install SimpleITK package by typing:
+
+conda install -c https://conda.anaconda.org/simpleitk SimpleITK
+
+#(Anaconda Prompt Windows):
+	# conda install -c https://conda.anaconda.org/simpleitk SimpleITK
+
+## Type 'y' whenever it is asked: >> Proceed ([y]/n)? y
+
+## Install numpy package by typing:
+
+conda install numpy
+
+#(Anaconda Prompt Windows):
+	# conda install numpy
+
+## Type 'y' whenever it is asked: >> Proceed ([y]/n)? y
+
+
+#--------------------------------------------------------------------------------------------------
+	# Before runing the script, it is possible to verify the environment's set up as follows:
+
+	# Open a new terminal and activate the environment as follows:
+
+	source activate your_new_env
+
+	#(Anaconda Prompt Windows):
+		# conda activate your_new_env 
+
+	# Initialize python as follows:
+
+	python
+
+	#(Anaconda Prompt Windows):
+		# python 
+
+	# The next message should appear inmideately:
+		# Python 3.6.6 |Anaconda custom (64-bit)| (default, Jun 28 2018, 17:14:51) 
+		# [GCC 7.2.0] on linux
+		# Type "help", "copyright", "credits" or "license" for more information.
+
+	# Confirm that the correct version of keras was successfully installed by typing
+
+	import keras
+	keras.__version__
+	# '1.2.2'
+
+	# Exit python by typing:
+
+	exit()
+#--------------------------------------------------------------------------------------------------
+
+# 3.- Addapt the script to user's paths.
+#--------------------------------------------------------------------------------------------------
+
+## Open the script "process_images.py" with a text editor and, IF NEEDED (only when 'data' folder is not located in 'FRU_processing' folder), update the following paths:
+	## NOTE: update the paths to your machine
+	# data_folder = 'data/dataset_01'
+	# data_folder = 'data/dataset_02'
+	data_folder = 'data/dataset_03'
+	output_path = 'fru_results/'
+
+# Notice that 'process_images.py' and the trained models ('.h5' files) should be located in the same folder. 
+
+## Uncomment path corresponding to the data to process. For instance, to process images in Dataset 1, 'process_images.py' should look like:
+
+	## NOTE: update the paths to your machine
+	data_folder = 'data/dataset_01'
+	# data_folder = 'data/dataset_02'
+	# data_folder = 'data/dataset_03'
+	output_path = 'fru_results/'
+
+## Uncomment the model to use. For instance, to use U1, 'process_images.py' should look like:
+
+	# Choose the model
+	# Load FRU1.
+	# model = load_model('fully_residual_dropout_segmentation_03_04.h5')
+	# Load FRU2.
+	# model = load_model('fully_residual_dropout_segmentation_01_04.h5')
+	# Load FRU3.
+	# model = load_model('fully_residual_dropout_segmentation.h5')
+	# Load model U1.
+	model = load_model('unet_segmentation_3_4_reduce_learning_rate_400.h5')
+	# Load model U2.
+	# model = load_model('unet_segmentation_1_4_reduce_learning_rate_400.h5')
+	# Load model U3.
+	# model = load_model('unet_dropout_segmentation.h5')
+	# Load FRU trained only with Dataset 2.
+	# model = load_model('fully_residual_dropout_segmentation_03_nonoverfit.h5')
+
+
+# 4.- Run the script.
+#--------------------------------------------------------------------------------------------------
+## Open a new Terminal (Anaconda Prompt Windows in Windows) and follow the next steps:
+
+## Move to the correct directory where the scripts and data are stored: 
+
+cd D:/Documents/FRU_processing/code/
+
+#(Anaconda Prompt Windows):
+	# cd D:/Documents/FRU_processing/code/
+
+## Open the terminal and activate your environment:
+
+source activate your_new_env
+
+#(Anaconda Prompt Windows):
+	# conda activate your_new_env
+
+## Execute the script by typing:
+
+python process_images.py
+
+#(Anaconda Prompt Windows):
+	# python process_images.py
+
+## Once the code has finished, deactivate your environment:
+
+deactivate your_new_env
+
+#(Anaconda Prompt Windows):
+	# conda deactivate 
+
+
+#--------------------------------------------------------------------------------------------------
+# Possible error messages
+#--------------------------------------------------------------------------------------------------
+#### When running 'process_images.py', if keras was build over Theano ("Using Theano backend"), we could get the next error message: "theano.ifelse does not exist". To solve this:
+
+# Open the file 
+'/home/user/anaconda3/envs/oldkeras/lib/python3.6/site-packages/keras/backend/theano_backend.py' with a text editor and add the line "import theano.ifelse" at the beginning. It should look as follows:
+
+	# import theano
+	# import theano.ifelse
+	# from theano import tensor as T
+
+#Path for Windows: "C:\Users\AppData\Local\conda\conda\envs\your_new_env"
+#--------------------------------------------------------------------------------------------------
+
