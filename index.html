@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EV-Morph QC Demo v3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{--bg:#EEF2F3;--sf:#fff;--tx:#1C2B33;--mt:#566A71;--bd:#D0DADD;--ac:#1F6F6B;--ab:#fff;--wn:#F6EBC8;--wt:#5C4700;--ok:#1E6B49;--er:#9B2F28;--band:rgba(31,111,107,.10);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#10181C;--sf:#18242A;--tx:#E6EEF0;--mt:#9FB0B6;--bd:#2B3B42;--ac:#4FB3AC;--ab:#08201F;--wn:#3A3213;--wt:#F1DC8A;--ok:#6FD3A0;--er:#F09A92;--band:rgba(79,179,172,.14)}}
+:root[data-theme=dark]{--bg:#10181C;--sf:#18242A;--tx:#E6EEF0;--mt:#9FB0B6;--bd:#2B3B42;--ac:#4FB3AC;--ab:#08201F;--wn:#3A3213;--wt:#F1DC8A;--ok:#6FD3A0;--er:#F09A92;--band:rgba(79,179,172,.14)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,"Segoe UI",sans-serif}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 16px;background:var(--sf);border-bottom:1px solid var(--bd)}
+.br{font-size:17px;margin-right:6px}.sp{flex:1}
+.b{background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:6px 11px;font:inherit;cursor:pointer}
+.p{background:var(--ac);color:var(--ab);border-color:var(--ac);font-weight:600}
+.b:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.wn{background:var(--wn);color:var(--wt);border-radius:6px;padding:4px 9px;font-size:13px}
+.mt{color:var(--mt)}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px;padding:12px 16px}
+@media(max-width:900px){.main{grid-template-columns:1fr}}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:12px 14px;margin-bottom:10px}
+h2,h3{font-size:14px;margin:0 0 8px}
+.cv{position:relative;border:1px solid var(--bd);border-radius:6px;overflow:hidden;background:#222}
+.cv canvas{display:block;width:100%;height:auto}
+#ov{position:absolute;left:0;top:0;width:100%;height:100%;cursor:crosshair}
+.chips,.r{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chips{margin:8px 0}
+.chip i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.chip[aria-pressed=false]{opacity:.45;text-decoration:line-through}
+.st{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin:0}
+.st dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.bar{display:flex;height:12px;border-radius:4px;overflow:hidden;background:var(--bd);margin-top:8px}
+.bar span{display:block;height:100%}
+label{display:block;margin-top:8px;color:var(--mt);font-size:13px}
+.ck{display:flex;gap:8px;align-items:center;margin-top:6px;color:var(--tx)}
+input[type=range]{width:100%}
+.num{width:90px;font:inherit;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:3px 6px}
+select{font:inherit;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:4px 6px;width:100%;margin-top:2px}
+.lg{font-size:12px;color:var(--mt);line-height:1.5}
+.bdg{display:inline-block;border-radius:10px;padding:1px 8px;font-size:12px;margin:0 4px 4px 0;background:var(--wn);color:var(--wt)}
+.big{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.pl{margin:0;padding-left:20px}.pl .dn{color:var(--ok)}.pl .ac{font-weight:600}
+.ir{display:flex;gap:12px;align-items:center}
+#zc{width:96px;height:96px;border:1px solid var(--bd);border-radius:4px;flex:none}
+.au{margin:8px 0 0;padding:0;list-style:none;font-size:13px;max-height:140px;overflow:auto}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:9}
+.md{background:var(--sf);border-radius:8px;max-width:680px;width:100%;max-height:90vh;overflow:auto;padding:16px 20px}
+.md>.r:first-child{justify-content:space-between}
+.md h3{margin-top:14px}
+.dz{border:2px dashed var(--bd);border-radius:6px;padding:16px;text-align:center}
+.ok{color:var(--ok)}.er{color:var(--er)}
+.rd{margin-top:8px;display:block}
+textarea{width:100%;font:inherit;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px}
+table{width:100%;border-collapse:collapse}
+td,th{text-align:left;padding:5px 6px;border-bottom:1px solid var(--bd)}
+.tbl{font-size:13px}.tbl td,.tbl th{padding:4px 6px}
+.tbl td:not(:first-child){font-variant-numeric:tabular-nums}
+.rowh td{background:var(--band)}
+#tip{position:fixed;display:none;pointer-events:none;background:#0F1A1F;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;z-index:8;max-width:360px}
+#ts{position:fixed;right:16px;bottom:16px;background:#0F1A1F;color:#fff;padding:8px 12px;border-radius:6px;display:none;z-index:10;max-width:340px}
+</style>
+</head>
+<body>
+<header class="top">
+  <b class="br">◉ EV-Morph QC</b>
+  <span class="mt" id="hdr">Batch EVM-2026-014</span>
+  <span class="wn" id="mode">Demo v3: citra sintetis, klasifikasi disimulasikan, bukan hasil eksperimen.</span>
+  <span class="sp"></span>
+  <button class="b" id="up">Buka citra (TIFF/PNG/JPG)</button>
+  <button class="b p" id="rn">Jalankan analisis</button>
+  <button class="b" id="nx">Review berikutnya</button>
+  <button class="b" id="rp">Laporan batch</button>
+  <button class="b" id="dlb">Unduh data</button>
+  <button class="b" id="kc">Kriteria klasifikasi</button>
+  <button class="b" id="kal">Panduan kalibrasi</button>
+  <button class="b" id="ab">Tentang dan batasan</button>
+</header>
+
+<div class="main">
+  <section>
+    <div class="cv">
+      <canvas id="bc" width="960" height="620" role="img" aria-label="Citra TEM"></canvas>
+      <canvas id="ov" width="960" height="620"></canvas>
+    </div>
+    <div class="chips" id="chs"></div>
+    <div id="pc" class="lg"></div>
+
+    <div class="card" style="margin-top:10px">
+      <div class="r" style="justify-content:space-between"><h2 style="margin:0">Distribusi diameter</h2>
+        <label style="margin:0;min-width:200px">Rentang grafik
+          <select id="hr"><option value="auto">Otomatis (mengikuti data)</option><option value="full">Penuh 0–1000 nm</option></select></label></div>
+      <canvas id="hg" width="900" height="210" style="width:100%;height:auto;margin-top:6px" role="img" aria-label="Histogram diameter bertumpuk per kategori"></canvas>
+      <div class="lg" id="hgi"></div>
+      <h3 style="margin-top:10px">Distribusi bertahap per 100 nm</h3>
+      <table class="tbl"><thead><tr><th>Rentang (nm)</th><th>Partikel</th><th>%</th><th>% kumulatif</th><th></th></tr></thead><tbody id="dt"></tbody></table>
+      <div class="lg" id="dtf" style="margin-top:4px"></div>
+    </div>
+  </section>
+
+  <aside>
+    <div class="card"><h2>Alur pemrosesan</h2><ol class="pl" id="pl"></ol></div>
+
+    <div class="card">
+      <h2>Parameter</h2>
+      <label>Jenis sampel
+        <select id="jt"><option value="0">Vesikel ekstraseluler (EV)</option><option value="1">Liposom / nanoemulsi</option><option value="2">Sel / fragmen subseluler</option></select></label>
+      <label>Kalibrasi skala (nm per piksel citra asli) <input class="num" type="number" id="sc" min="0.01" max="50" step="0.01" value="2"></label>
+      <div class="lg" id="sci" style="margin-top:4px"></div>
+      <button class="b" id="cb" style="margin-top:8px;width:100%">Ukur skala (klik 2 titik pada citra)</button>
+      <label>Rentang target minimum: <output id="mnv">30</output> nm<input type="range" id="mn" min="1" max="500" value="30"></label>
+      <label>Rentang target maksimum: <output id="mxv">300</output> nm (batas ukur sistem 1000 nm)<input type="range" id="mx" min="50" max="1000" step="10" value="300"></label>
+      <label>Ambang keyakinan τ: <output id="tav">0.70</output><input type="range" id="ta" min="30" max="95" value="70"></label>
+      <label id="sensw">Sensitivitas deteksi (citra unggahan): <output id="sev">1.00</output><input type="range" id="se" min="70" max="130" value="100"></label>
+    </div>
+
+    <div class="card">
+      <h2>Tampilan overlay</h2>
+      <label class="ck"><input type="checkbox" id="vb" checked> Kotak kuning (objek tercatat)</label>
+      <label class="ck"><input type="checkbox" id="vr" checked> Cincin warna kategori</label>
+      <label class="ck"><input type="checkbox" id="vl" checked> Label nomor objek</label>
+      <label class="ck"><input type="checkbox" id="vo" checked> Objek di luar rentang target (abu-abu)</label>
+      <div class="lg" style="margin-top:6px">Kategori dapat disembunyikan lewat tombol kategori di bawah citra. Ini hanya mengubah tampilan dan grafik, bukan jumlah yang tercatat.</div>
+    </div>
+
+    <div class="card">
+      <h2>Ringkasan langsung</h2>
+      <dl class="st" id="sm"></dl>
+      <div class="bar" id="sb"></div>
+    </div>
+
+    <div class="card">
+      <h2>Konsentrasi partikel (estimasi)</h2>
+      <div class="r">
+        <label style="margin:0">Volume diteteskan ke grid (µL)<br><input class="num" type="number" id="cvv" value="5" min="0.1" step="0.1"></label>
+        <label style="margin:0">Faktor pengenceran<br><input class="num" type="number" id="cvd" value="1" min="1" step="1"></label>
+        <label style="margin:0">Diameter grid (mm)<br><input class="num" type="number" id="cvg" value="3.05" min="1" step="0.01"></label>
+      </div>
+      <div id="cvo" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card"><h2>Objek terpilih</h2><div id="in"></div></div>
+
+    <div class="card"><h2>Jejak audit</h2><dl class="st" id="mdt"></dl><ul class="au" id="au"></ul></div>
+  </aside>
+</div>
+
+<div class="mo" id="mo" role="dialog" aria-modal="true" aria-labelledby="mt">
+  <div class="md"><div class="r"><h2 id="mt"></h2><button class="b" data-x="1" aria-label="Tutup">✕</button></div><div id="mb"></div></div>
+</div>
+<div id="tip"></div>
+<div id="ts" role="status"></div>
+
+<script>
+"use strict";
+/* ================= util & konstanta ================= */
+const $=s=>document.querySelector(s),
+esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])),
+clamp=(v,a,b)=>Math.min(b,Math.max(a,v)),
+f2=v=>(+v).toFixed(2).replace(".",","),
+CL=["Utuh","Rusak","Artefak","Tidak pasti"],
+/* warna kontras tinggi, saling berbeda dan berbeda dari kuning kotak */
+CC=["#00C853","#FF6D00","#E040FB","#00B8D4"],
+DS=[[],[9,4],[2,3],[6,3,2,3]],
+BOX="#FFD600",
+/* ambang kriteria (satu sumber kebenaran untuk aturan, panel, laporan, ekspor) */
+TH={lcA:.25,bcR:.40,rdR:.70,rdU:.85,bcU:.60,bcF:.85,bcH:.50,ag:.50,tx:.45},
+JT=[{n:"Vesikel ekstraseluler (EV)",mn:30,mx:300},{n:"Liposom / nanoemulsi",mn:50,mx:1000},{n:"Sel / fragmen subseluler",mn:200,mx:1000}],
+SM=[{n:"TEM_A.png",k:44,b:4,w:[.72,.14,.08,.06],s:7},{n:"TEM_B.png",k:58,b:6,w:[.6,.2,.12,.08],s:21},{n:"TEM_C.png",k:36,b:3,w:[.8,.08,.06,.06],s:99}],
+W=960,H=620,
+st={src:"syn",i:0,fn:"",fw:W,fh:H,k:1,rect:[0,0,W,H],img:null,meta:null,jt:0,sc:2,mn:30,mx:300,tau:.7,se:1,seed:42,o:[],ran:0,sel:-1,log:[],
+    hash:"belum dihitung",f:[1,1,1,1],vis:{box:1,ring:1,lab:1,out:1},hr:"auto",busy:0,cal:0,pts:[],cv:{v:5,df:1,gd:3.05},bx:0,tm:0},
+rng=a=>()=>{a|=0;a=a+1831565813|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296},
+cls=o=>o.fc??o.p,
+dia=o=>2*o.r*st.k*st.sc,
+msr=o=>{const d=dia(o);return d>=1&&d<=1000},
+inr=o=>msr(o)&&dia(o)>=st.mn&&dia(o)<=st.mx,
+flag=o=>!o.rv&&o.cf<st.tau,
+bk=o=>o.bc>=TH.bcF?"penuh":o.bc>=TH.bcH?"separuh":"lemah",
+now=()=>new Date().toLocaleTimeString("id-ID"),
+log=m=>st.log.push([now(),m]),
+toast=t=>{const e=$("#ts");e.textContent=t;e.style.display="block";clearTimeout(st.tm);st.tm=setTimeout(()=>e.style.display="none",4200)},
+mod=(t,h)=>{$("#mt").textContent=t;$("#mb").innerHTML=h;$("#mo").style.display="flex";$("#mo button").focus()},
+cl=()=>$("#mo").style.display="none",
+pls=n=>$("#pl").innerHTML=[st.src=="file"?"A. Segmentasi (deteksi klasik)":"A. Segmentasi (simulasi)","B. Pengukuran dan distribusi","C. Klasifikasi berbasis kriteria","D. Keyakinan dan review","E. Laporan batch"].map((s,i)=>`<li class="${i<n?"dn":i==n?"ac":""}">${s}${i<n?" ✓":""}</li>`).join(""),
+pct=(a,b)=>b?a/b*100:0,
+SUP={"-":"⁻","0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹"},
+sci=(v,plain)=>{if(!isFinite(v)||v<=0)return"–";const e=Math.floor(Math.log10(v)),m=(v/10**e).toFixed(2);return plain?m+"e"+e:m.replace(".",",")+" × 10"+String(e).split("").map(c=>SUP[c]).join("")},
+quant=(a,q)=>{if(!a.length)return 0;const s=a.slice().sort((x,y)=>x-y),i=(s.length-1)*q,l=Math.floor(i);return s[l]+(s[Math.min(l+1,s.length-1)]-s[l])*(i-l)};
+
+/* ================= klasifikasi berbasis kriteria ================= */
+function clf(o){
+  const tr=[];let p,m;
+  if(o.lc<TH.lcA){p=2;m=(TH.lcA-o.lc)/TH.lcA;tr.push(`kontras lumen ${f2(o.lc)} < ${f2(TH.lcA)}: objek pejal tanpa lumen`)}
+  else if(o.bc<TH.bcR||o.rd<TH.rdR){p=1;const a=[];
+    if(o.bc<TH.bcR){a.push((TH.bcR-o.bc)/TH.bcR);tr.push(`batas ${f2(o.bc)} < ${f2(TH.bcR)}: membran terputus`)}
+    if(o.rd<TH.rdR){a.push((TH.rdR-o.rd)/.3);tr.push(`roundness ${f2(o.rd)} < ${f2(TH.rdR)}: kolaps atau deformasi`)}
+    m=Math.max(...a)}
+  else if(o.rd>=TH.rdU&&o.bc>=TH.bcU){p=0;m=Math.min((o.rd-TH.rdU)/.15,(o.bc-TH.bcU)/.4,(o.lc-TH.lcA)/.5);
+    tr.push(`roundness ${f2(o.rd)} ≥ ${f2(TH.rdU)}`,`batas ${f2(o.bc)} ≥ ${f2(TH.bcU)} (${bk(o)})`,`kontras lumen ${f2(o.lc)} ≥ ${f2(TH.lcA)}`)}
+  else{p=3;m=0;tr.push(`di antara ambang: roundness ${f2(o.rd)}, batas ${f2(o.bc)}`)}
+  let cf=p==3?.45:.5+.5*Math.min(1,Math.max(0,m)*3);
+  if(o.edge){cf=Math.min(cf,.55);tr.push("terpotong tepi citra: ukuran mungkin terpotong")}
+  o.p=p;o.cf=cf;o.tr=tr;
+  o.kd=p==1?[o.bc<TH.bcR?"membran terputus":null,o.rd<TH.rdR?"kolaps/deformasi":null].filter(Boolean):[];
+}
+function aggr(){const O=st.o;O.forEach(a=>{let g=1e9;O.forEach(b=>{if(a!==b)g=Math.min(g,Math.hypot(a.x-b.x,a.y-b.y)-a.r-b.r)});a.ag=clamp(1-g/(a.r*.8),0,1)})}
+
+/* ================= citra sintetis ================= */
+function gen(i){
+  const m=SM[i],R=rng(m.s),o=[];
+  const mk=(x,y,r,t)=>({id:o.length+1,x,y,r,t,a:R()*6.28,edge:0,bb:[x-r,y-r,x+r,y+r],
+    b:{rd:[.88+R()*.11,.50+R()*.32,.45+R()*.35,.74+R()*.12][t],
+       bc:[.66+R()*.34,.12+R()*.36,.20+R()*.40,.46+R()*.20][t],
+       lc:[.50+R()*.40,.45+R()*.40,.03+R()*.16,.28+R()*.20][t],
+       tx:t==0?(R()<.28?.46+R()*.40:.08+R()*.22):.15+R()*.45}});
+  const put=(t,r,close)=>{for(let q=0;q<200;q++){const x=r+8+R()*(W-2*r-16),y=r+8+R()*(H-2*r-16);
+    if(o.every(a=>Math.hypot(a.x-x,a.y-y)>a.r+r+(close?-.2*r:4))){o.push(mk(x,y,r,t));return}}};
+  for(let n=0;n<m.k;n++){const u=R(),t=u<m.w[0]?0:u<m.w[0]+m.w[1]?1:u<1-m.w[3]?2:3;put(t,t==2?4+R()*6:12+R()*28,R()<.12)}
+  for(let n=0;n<m.b;n++)put(R()<.65?0:1,60+R()*80,0);
+  return o;
+}
+function ves(x,o){
+  x.save();x.translate(o.x,o.y);const r=o.r,b=o.b;
+  if(b.lc<TH.lcA){x.fillStyle="#262a2c";x.beginPath();for(let k=0;k<10;k++){const q=k/10*6.283,u=r*(.75+.3*Math.abs(Math.sin(k*2.3+o.a)));x[k?"lineTo":"moveTo"](u*Math.cos(q),u*Math.sin(q))}x.closePath();x.fill()}
+  else{const g=x.createRadialGradient(0,0,r*.1,0,0,r),L=Math.round(110+120*b.lc);
+    g.addColorStop(0,`rgb(${L-40},${L-34},${L-30})`);g.addColorStop(.8,`rgb(${L},${L+6},${L+8})`);g.addColorStop(1,"#e6eaeb");
+    x.fillStyle=g;x.beginPath();
+    if(b.rd<.8){x.ellipse(0,0,r,r*Math.max(.55,b.rd),o.a,0,6.283)}else x.arc(0,0,r,0,6.283);x.fill();
+    x.lineWidth=Math.max(2,r*.13);x.strokeStyle="#1f2426";x.beginPath();x.arc(0,0,r,o.a,o.a+6.283*b.bc);x.stroke();
+    if(b.tx>.4){const Rs=rng(o.id*131+7);x.fillStyle="rgba(50,56,60,.6)";for(let k=0;k<b.tx*14;k++){const aa=Rs()*6.283,rr=r*.7*Math.sqrt(Rs());x.fillRect(Math.cos(aa)*rr,Math.sin(aa)*rr,2,2)}}}
+  x.restore();
+}
+function draw(){
+  const x=$("#bc").getContext("2d");
+  if(st.src=="file"){const[ox,oy,dw,dh]=st.rect;x.fillStyle="#222";x.fillRect(0,0,W,H);x.imageSmoothingQuality="high";x.drawImage(st.img,ox,oy,dw,dh);return}
+  const R=rng(5);x.fillStyle="#6c747a";x.fillRect(0,0,W,H);
+  for(let n=0;n<9000;n++){x.fillStyle=R()<.5?"rgba(255,255,255,.06)":"rgba(0,0,0,.08)";x.fillRect(R()*W,R()*H,2,2)}
+  st.o.forEach(o=>ves(x,o));
+  /* batang skala sungguhan pada citra sintetis: 100 nm = 50 px (skala sebenarnya 2 nm/px) */
+  x.fillStyle="#fff";x.fillRect(24,H-30,50,5);x.font="14px system-ui";x.shadowColor="#000";x.shadowBlur=4;x.fillText("100 nm",24,H-38);x.shadowBlur=0;
+}
+
+/* ================= deteksi klasik pada citra unggahan =================
+   Otsu + isi lubang + komponen terhubung. Ini baseline sederhana, BUKAN FRU-Net. */
+function blur(a,w,h){const t=new Float32Array(a.length),o=new Float32Array(a.length);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;t[i]=(a[i-(x>0)]+a[i]+a[i+(x<w-1)])/3}
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;o[i]=(t[i-(y>0?w:0)]+t[i]+t[i+(y<h-1?w:0)])/3}return o}
+function detect(){
+  const[ox,oy,w,h]=st.rect.map(Math.round),d=$("#bc").getContext("2d").getImageData(ox,oy,w,h).data,n=w*h;
+  let g=new Float32Array(n);for(let i=0;i<n;i++)g[i]=.299*d[4*i]+.587*d[4*i+1]+.114*d[4*i+2];
+  g=blur(blur(g,w,h),w,h);
+  const hs=new Float64Array(256);for(let i=0;i<n;i++)hs[g[i]|0]++;
+  let sum=0;for(let i=0;i<256;i++)sum+=i*hs[i];let sB=0,wB=0,best=-1,thr=128;
+  for(let t=0;t<256;t++){wB+=hs[t];if(!wB)continue;const wF=n-wB;if(!wF)break;sB+=t*hs[t];const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)**2;if(v>best){best=v;thr=t}}
+  thr*=st.se;
+  const dk=new Uint8Array(n);for(let i=0;i<n;i++)dk[i]=g[i]<thr?1:0;
+  const re=new Uint8Array(n),q=new Int32Array(n);let qh=0,qt=0;
+  const push=i=>{if(!dk[i]&&!re[i]){re[i]=1;q[qt++]=i}};
+  for(let X=0;X<w;X++){push(X);push((h-1)*w+X)}for(let Y=0;Y<h;Y++){push(Y*w);push(Y*w+w-1)}
+  while(qh<qt){const i=q[qh++],X=i%w,Y=(i/w)|0;if(X>0)push(i-1);if(X<w-1)push(i+1);if(Y>0)push(i-w);if(Y<h-1)push(i+w)}
+  let bgS=0,bgN=0;for(let i=0;i<n;i++)if(re[i]){bgS+=g[i];bgN++}const gb=bgN?bgS/bgN:200;
+  const lb=new Int32Array(n),cs=[];let L=0;
+  for(let s=0;s<n;s++){if(re[s]||lb[s])continue;L++;let A=0,E=0,sx=0,sy=0,x0=w,y0=h,x1=0,y1=0,edge=0;qh=qt=0;q[qt++]=s;lb[s]=L;
+    while(qh<qt){const i=q[qh++],X=i%w,Y=(i/w)|0;A++;sx+=X;sy+=Y;if(X<x0)x0=X;if(X>x1)x1=X;if(Y<y0)y0=Y;if(Y>y1)y1=Y;
+      const nb=[X>0?i-1:-1,X<w-1?i+1:-1,Y>0?i-w:-1,Y<h-1?i+w:-1];
+      for(const j of nb){if(j<0){E++;edge=1;continue}if(re[j]){E++;continue}if(!lb[j]){lb[j]=L;q[qt++]=j}}}
+    if(A>=12&&A<=n*.25)cs.push({A,E,cx:sx/A,cy:sy/A,x0,y0,x1,y1,edge})}
+  cs.sort((a,b)=>b.A-a.A);if(cs.length>1500)cs.length=1500;
+  const G=(X,Y)=>g[clamp(Y|0,0,h-1)*w+clamp(X|0,0,w-1)];
+  st.o=cs.map((c,ii)=>{const r=Math.sqrt(c.A/Math.PI),P=Math.max(1,c.E*Math.PI/4);
+    let dc=0,rs=0;for(let a=0;a<72;a++){const t=a/72*6.2832,co=Math.cos(t),si=Math.sin(t);let m=255;for(const f of[.85,.95,1.05])m=Math.min(m,G(c.cx+co*r*f,c.cy+si*r*f));rs+=m;if(m<thr)dc++}
+    const gr=rs/72;let is=0,iq=0;for(let a=0;a<48;a++){const t=a*2.39996,u=Math.sqrt((a+.5)/48)*r*.55,v=G(c.cx+Math.cos(t)*u,c.cy+Math.sin(t)*u);is+=v;iq+=v*v}
+    const gi=is/48,sd=Math.sqrt(Math.max(0,iq/48-gi*gi)),den=Math.max(15,Math.abs(gb-gr));
+    return{id:ii+1,x:ox+c.cx+.5,y:oy+c.cy+.5,r,bb:[ox+c.x0,oy+c.y0,ox+c.x1+1,oy+c.y1+1],rd:clamp(4*Math.PI*c.A/(P*P),0,1),bc:dc/72,lc:clamp((gi-gr)/den,0,1),tx:clamp(sd/den*2,0,1),ag:0,edge:c.edge}});
+  aggr();st.o.forEach(clf);return thr;
+}
+
+/* ================= overlay ================= */
+function ring(x,cx,cy,r,c,w,d){x.setLineDash([]);x.strokeStyle="rgba(0,0,0,.6)";x.lineWidth=w+3;x.beginPath();x.arc(cx,cy,r,0,6.283);x.stroke();x.setLineDash(d);x.strokeStyle=c;x.lineWidth=w;x.beginPath();x.arc(cx,cy,r,0,6.283);x.stroke();x.setLineDash([])}
+function paint(){
+  const x=$("#ov").getContext("2d");x.clearRect(0,0,W,H);let bx=0,hid=0;
+  if(st.ran){st.o.forEach(o=>{
+    if(!msr(o))return;const k=cls(o);
+    if(!st.f[k]){hid++;return}
+    if(!inr(o)){if(st.vis.out)ring(x,o.x,o.y,o.r+3,"#cfd6d9",1.5,[3,4]);return}
+    if(st.vis.box){const[a,b,c,d]=o.bb;x.setLineDash(flag(o)?[6,4]:[]);x.strokeStyle="rgba(0,0,0,.6)";x.lineWidth=4;x.strokeRect(a,b,c-a,d-b);x.strokeStyle=BOX;x.lineWidth=2;x.strokeRect(a,b,c-a,d-b);x.setLineDash([]);bx++}
+    if(st.vis.ring)ring(x,o.x,o.y,o.r+4,CC[k],3,DS[k]);
+    if(st.vis.lab){x.font="bold 11px system-ui";x.shadowColor="#000";x.shadowBlur=3;x.fillStyle=BOX;x.fillText("#"+o.id+(flag(o)?" !":""),o.bb[0],o.bb[1]-4);x.shadowBlur=0}
+    if(o.rv){x.fillStyle="#6FD3A0";x.font="bold 13px system-ui";x.fillText("✓",o.bb[2]-8,o.bb[1]+12)}});
+    const s=st.o[st.sel];if(s)ring(x,s.x,s.y,s.r+10,"#fff",3,[])}
+  st.bx=bx;st.hid=hid;
+  if(st.pts.length){x.fillStyle="#4FB3AC";st.pts.forEach(p=>{x.beginPath();x.arc(p[0],p[1],4,0,6.283);x.fill()});
+    if(st.pts.length==2){const[a,b]=st.pts,d=Math.hypot(a[0]-b[0],a[1]-b[1])*st.k;x.strokeStyle="#4FB3AC";x.lineWidth=2;x.setLineDash([6,4]);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();x.setLineDash([]);x.font="13px system-ui";x.shadowColor="#000";x.shadowBlur=4;x.fillStyle="#fff";x.fillText(d.toFixed(1)+" piksel asli",(a[0]+b[0])/2+8,(a[1]+b[1])/2);x.shadowBlur=0}}
+}
+
+/* ================= grafik: histogram bertumpuk per kategori ================= */
+function niceMax(M){M=Math.max(M,5);const p=10**Math.floor(Math.log10(M)),f=M/p;return(f<=1?1:f<=2?2:f<=5?5:10)*p}
+function hist(cv,T){
+  const w=cv.width,h=cv.height,x=cv.getContext("2d");x.clearRect(0,0,w,h);if(T.bg){x.fillStyle=T.bg;x.fillRect(0,0,w,h)}
+  const D=st.ran?st.o.filter(o=>msr(o)&&st.f[cls(o)]):[],L=52,Rm=14,Tp=14,B=h-40;
+  let xmax=1000,bw=50;
+  if(st.hr=="auto"&&D.length){const r=Math.max(quant(D.map(dia),.99)*1.15,st.mn+20,60);bw=[5,10,20,25,50,100].find(v=>v>=r/28)||100;xmax=Math.min(1000,Math.ceil(r/bw)*bw)}
+  const nb=Math.ceil(xmax/bw),C=Array.from({length:nb},()=>[0,0,0,0]);let over=0;
+  D.forEach(o=>{const d=dia(o);if(d>xmax){over++;return}C[Math.min(nb-1,Math.floor(d/bw))][cls(o)]++});
+  const ym=niceMax(Math.max(...C.map(c=>c[0]+c[1]+c[2]+c[3]),0)),X=v=>L+v/xmax*(w-L-Rm),Y=v=>B-v/ym*(B-Tp);
+  x.fillStyle=T.band;const a=X(Math.min(st.mn,xmax)),b=X(Math.min(st.mx,xmax));x.fillRect(a,Tp,Math.max(0,b-a),B-Tp);
+  x.font="12px system-ui";x.textAlign="right";
+  for(let k=0;k<=5;k++){const v=ym*k/5,yy=Y(v);x.strokeStyle=T.grid;x.lineWidth=1;x.beginPath();x.moveTo(L,yy);x.lineTo(w-Rm,yy);x.stroke();x.fillStyle=T.tx;x.fillText(Number.isInteger(v)?v:v.toFixed(1),L-6,yy+4)}
+  const bwp=(w-L-Rm)/nb;
+  C.forEach((c,i)=>{let acc=0;[0,1,2,3].forEach(k=>{if(!c[k])return;x.fillStyle=CC[k];x.fillRect(L+i*bwp+1,Y(acc+c[k]),Math.max(1,bwp-2),Y(acc)-Y(acc+c[k]));acc+=c[k]})});
+  x.strokeStyle=T.tx;x.lineWidth=1;x.beginPath();x.moveTo(L,Tp);x.lineTo(L,B);x.lineTo(w-Rm,B);x.stroke();
+  x.textAlign="center";x.fillStyle=T.tx;const tk=[10,20,25,50,100,200].find(v=>xmax/v<=8)||200;
+  for(let v=0;v<=xmax;v+=tk){x.beginPath();x.moveTo(X(v),B);x.lineTo(X(v),B+4);x.stroke();x.fillText(v,X(v),B+17)}
+  x.fillText("Diameter (nm)",(L+w-Rm)/2,h-6);
+  x.save();x.translate(13,(Tp+B)/2);x.rotate(-Math.PI/2);x.fillText("Jumlah partikel",0,0);x.restore();
+  x.textAlign="left";if(over){x.fillStyle=T.tx;x.fillText(`+${over} partikel > ${xmax} nm (tidak tampil)`,L+6,Tp+12)}
+  return{bw,xmax,over,n:D.length};
+}
+
+/* ================= distribusi 100 nm & ringkasan ================= */
+function dist(){const M=st.o.filter(msr),N=M.length;let cum=0;return Array.from({length:10},(_,i)=>{const lo=i*100+1,hi=(i+1)*100,c=M.filter(o=>{const d=dia(o);return d>=lo-1&&d<=hi&&(i>0||d>=1)&&d>i*100}).length;cum+=c;return{lo,hi,c,p:pct(c,N),cp:pct(cum,N),tg:hi>=st.mn&&lo<=st.mx}})}
+function summ(){
+  const M=st.ran?st.o.filter(msr):[],A=M.filter(inr),n=[0,0,0,0];A.forEach(o=>n[cls(o)]++);
+  const ds=M.map(dia),S={M,A,n,N:M.length,T:A.length,F:A.filter(flag).length,
+    full:M.filter(o=>o.bc>=TH.bcF).length,half:M.filter(o=>o.bc>=TH.bcH&&o.bc<TH.bcF).length,weak:M.filter(o=>o.bc<TH.bcH).length,
+    ag:M.filter(o=>o.ag>TH.ag).length,tx:M.filter(o=>o.tx>TH.tx&&o.lc>=TH.lcA).length,edge:M.filter(o=>o.edge).length,
+    over:st.ran?st.o.filter(o=>dia(o)>1000).length:0,under:st.ran?st.o.filter(o=>dia(o)<1).length:0,
+    d10:quant(ds,.1),d50:quant(ds,.5),d90:quant(ds,.9),rdm:quant(A.map(o=>o.rd),.5),rev:A.filter(o=>o.rv).length};
+  const imgNm2=(st.rect[2]*st.k*st.sc)*(st.rect[3]*st.k*st.sc),imgMm2=imgNm2*1e-12,grid=Math.PI*(st.cv.gd/2)**2;
+  S.imgMm2=imgMm2;S.gridMm2=grid;S.conc=S.N&&imgMm2>0?S.N/imgMm2*grid/(st.cv.v*1e-3)*st.cv.df:0;
+  S.concT=S.T&&imgMm2>0?S.T/imgMm2*grid/(st.cv.v*1e-3)*st.cv.df:0;return S}
+
+function upd(){
+  paint();const S=summ(),pc=k=>Math.round(pct(S.n[k],S.T));
+  document.querySelectorAll(".chip").forEach((b,k)=>{b.querySelector("b").textContent=S.n[k];b.setAttribute("aria-pressed",!!st.f[k])});
+  const shown=S.A.filter(o=>st.f[cls(o)]).length;
+  $("#pc").innerHTML=st.ran?`${CL.map((c,k)=>c+" "+pc(k)+"%").join(" · ")}<br>Kotak kuning ditampilkan: <b>${st.vis.box?st.bx:0}</b> · objek dalam rentang dan kategori terlihat: <b>${shown}</b> ${!st.vis.box?"(kotak disembunyikan)":st.bx===shown?"✓ konsisten":"✕ tidak konsisten"} · disembunyikan filter kategori: ${st.hid||0}<br>Legenda: kotak kuning = batas objek tercatat · cincin warna = kategori (garis penuh/putus berbeda per kategori) · kotak putus-putus + "!" = perlu review.`:"";
+  $("#sb").innerHTML=S.n.map((v,k)=>`<span style="width:${pct(v,S.T)}%;background:${CC[k]}"></span>`).join("");
+  $("#mnv").textContent=st.mn;$("#mxv").textContent=st.mx;$("#tav").textContent=st.tau.toFixed(2);$("#sev").textContent=st.se.toFixed(2);
+  $("#sensw").style.display=st.src=="file"?"block":"none";
+  $("#sci").innerHTML=sciInfo();
+  $("#sm").innerHTML=st.ran?`
+    <dt><b>Total partikel terdeteksi (1–1000 nm)</b></dt><dd><b>${S.N}</b></dd>
+    <dt>Dalam rentang target ${st.mn}–${st.mx} nm</dt><dd>${S.T} (${pct(S.T,S.N).toFixed(1)}%)</dd>
+    <dt>Di luar rentang target</dt><dd>${S.N-S.T}</dd>
+    ${S.over?`<dt>Di atas batas ukur (&gt; 1000 nm)</dt><dd>${S.over}</dd>`:""}
+    <dt>D10 / D50 / D90</dt><dd>${S.d10.toFixed(0)} / ${S.d50.toFixed(0)} / ${S.d90.toFixed(0)} nm</dd>
+    <dt>Batas penuh / separuh / lemah</dt><dd>${S.full} / ${S.half} / ${S.weak}</dd>
+    <dt>Indikasi agregasi (tanda review)</dt><dd>${S.ag}</dd>
+    <dt>Tekstur granular (indikasi muatan)</dt><dd>${S.tx}</dd>
+    ${S.edge?`<dt>Terpotong tepi citra</dt><dd>${S.edge}</dd>`:""}
+    <dt>Perlu review</dt><dd>${S.F}</dd><dt>Sudah direview</dt><dd>${S.rev}</dd>
+    <dt>Median roundness (dalam rentang)</dt><dd>${f2(S.rdm)}</dd>`:`<dt class="mt" style="grid-column:1/3">Belum dianalisis. Buka citra atau pilih citra contoh, lalu jalankan analisis.</dt>`;
+  const cs=getComputedStyle(document.body),hi=hist($("#hg"),{tx:cs.color,grid:cs.getPropertyValue("--bd"),band:cs.getPropertyValue("--band")});
+  $("#hgi").textContent=st.ran?`Lebar bin ${hi.bw} nm · ${hi.n} partikel ditampilkan, ditumpuk per kategori sesuai warna tombol kategori · pita berarsir = rentang target ${st.mn}–${st.mx} nm`+(st.f.includes(0)?" · sebagian kategori disembunyikan":""):"Jalankan analisis untuk melihat grafik.";
+  $("#dt").innerHTML=st.ran?dist().map(r=>`<tr${r.tg?' class="rowh"':""}><td>${r.lo}–${r.hi}</td><td>${r.c}</td><td>${r.p.toFixed(1)}</td><td>${r.cp.toFixed(1)}</td><td>${r.tg?"target":""}</td></tr>`).join(""):`<tr><td colspan="5" class="mt">—</td></tr>`;
+  $("#dtf").textContent=st.ran?`Persen dihitung dari ${S.N} partikel terukur (1–1000 nm). ${pct(S.T,S.N).toFixed(1)}% berada dalam rentang target ${st.mn}–${st.mx} nm.`:"";
+  $("#cvo").innerHTML=st.ran?`<div class="big">${sci(S.conc)} partikel/mL</div><div class="lg">Total ${S.N} partikel (dalam rentang target: ${sci(S.concT)}/mL). Luas citra ${S.imgMm2.toExponential(2).replace(".",",")} mm² dari luas grid ${S.gridMm2.toFixed(2).replace(".",",")} mm².<br>Rumus: (N ÷ luas citra) × luas grid ÷ volume × faktor pengenceran. <b>Estimasi orde besaran</b>: menganggap semua partikel menempel merata di grid; hasil sebenarnya bisa jauh lebih tinggi karena efisiensi adsorpsi tidak 100%. Untuk konsentrasi yang dilaporkan, gunakan NTA.</div>`:`<p class="mt">Jalankan analisis untuk menghitung.</p>`;
+  const s=st.o[st.sel],I=$("#in");
+  if(!s||!st.ran)I.innerHTML=`<p class="mt">Klik objek pada citra untuk melihat detail.</p>`;
+  else{const k=cls(s),io=inr(s);
+    I.innerHTML=`<div class="ir"><canvas id="zc" width="96" height="96"></canvas><dl class="st">
+      <dt>Objek</dt><dd>#${s.id}</dd><dt>Kategori</dt><dd><b style="color:${CC[k]}">K${k+1} ${CL[k]}</b></dd>
+      <dt>Diameter</dt><dd>${dia(s).toFixed(0)} nm</dd><dt>Roundness</dt><dd>${f2(s.rd)}</dd>
+      <dt>Kontinuitas batas</dt><dd>${f2(s.bc)} (${bk(s)})</dd><dt>Kontras lumen</dt><dd>${f2(s.lc)}</dd>
+      <dt>Skor agregasi</dt><dd>${f2(s.ag)}</dd><dt>Tekstur lumen</dt><dd>${f2(s.tx)}</dd><dt>Keyakinan</dt><dd>${f2(s.cf)}</dd></dl></div>
+      <div class="bar"><span style="width:${s.cf*100}%;background:${CC[k]}"></span></div>
+      <p class="lg" style="margin:6px 0">Alasan kategori: ${s.tr.map(esc).join("; ")}.${s.fc!=null&&s.fc!==s.p?` Dikoreksi ahli dari ${CL[s.p]}.`:""}</p>
+      <div>${s.ag>TH.ag?'<span class="bdg">indikasi agregasi</span>':""}${s.tx>TH.tx&&s.lc>=TH.lcA?'<span class="bdg">tekstur granular · indikasi muatan</span>':""}${s.edge?'<span class="bdg">terpotong tepi</span>':""}${s.kd.map(t=>`<span class="bdg">${t}</span>`).join("")}</div>
+      <p class="${flag(s)&&io?"wn":"mt"}">${!io?"Di luar rentang target; tidak dihitung dalam kategori.":s.rv?"Direview: "+s.rv.u+", "+s.rv.t+".":flag(s)?"Perlu review. Keyakinan di bawah ambang "+st.tau.toFixed(2)+".":"Keyakinan di atas ambang."}</p>
+      <div class="r"><button class="b p" id="ap">Setujui</button><button class="b" id="ub">Ubah kategori</button></div>`;
+    const[a,b,c,d]=s.bb,m=Math.max(c-a,d-b)*.15+6;$("#zc").getContext("2d").drawImage($("#bc"),a-m,b-m,c-a+2*m,d-b+2*m,0,0,96,96)}
+  $("#mdt").innerHTML=`<dt>Sumber</dt><dd>${st.src=="file"?"Berkas unggahan":"Citra sintetis"}</dd><dt>Citra</dt><dd title="${esc(nm())}">${esc(nm()).slice(0,24)}</dd><dt>Ukuran asli</dt><dd>${st.fw} × ${st.fh} px</dd><dt>Jenis sampel</dt><dd>${JT[st.jt].n}</dd><dt>Metode</dt><dd>${st.src=="file"?"deteksi klasik v0.3":"simulasi v0.3"}</dd><dt>Skala</dt><dd>${st.sc} nm/px</dd><dt>Seed</dt><dd>${st.seed}</dd><dt>SHA-256</dt><dd title="${st.hash}">${st.hash.slice(0,12)}…</dd>`;
+  $("#au").innerHTML=st.log.slice(-8).reverse().map(l=>`<li><span class="mt">${l[0]}</span> ${l[1]}</li>`).join("");
+  if(!st.busy)pls(st.ran?5:-1);
+}
+const nm=()=>st.src=="file"?st.fn:SM[st.i].n;
+const sciInfo=()=>{const e=(.1/st.sc*100).toFixed(1),q=st.sc<=1.5?"tinggi, ideal untuk EV kecil":st.sc<=3?"memadai untuk sebagian besar EV":st.sc<=4?"cukup; objek kecil berisiko error besar":"rendah; di luar rekomendasi 0,5–3 nm/px";
+  return `1 piksel citra asli = <b>${st.sc} nm</b>${st.k!=1?` (tampilan diperkecil ${st.k.toFixed(2)}×)`:""}. Perubahan ±0,1 nm/px menggeser <b>semua</b> diameter ±${e}%. Mutu skala: <b>${q}</b>.${st.meta?`<br>Metadata TIFF menyarankan ${st.meta.toFixed(3)} nm/px. <button class="b" id="mta" style="padding:2px 8px">Pakai</button>`:""}`};
+
+/* ================= analisis ================= */
+function run(){
+  if(st.busy)return;st.busy=1;st.ran=0;st.sel=-1;st.o.forEach(o=>{delete o.rv;delete o.fc});upd();let n=0;
+  const t=()=>{pls(n);if(n<5){n++;setTimeout(t,380)}else{
+    let msg;
+    if(st.src=="file"){const th=detect();msg=`Deteksi klasik selesai: ${st.o.length} objek (ambang Otsu ${th.toFixed(0)}, sensitivitas ${st.se.toFixed(2)})`}
+    else{const R=rng(st.seed+st.i),z=s=>(R()+R()+R()-1.5)*s;aggr();
+      st.o.forEach(o=>{const b=o.b;o.rd=clamp(b.rd+z(.03),0,1);o.bc=clamp(b.bc+z(.04),0,1);o.lc=clamp(b.lc+z(.03),0,1);o.tx=clamp(b.tx+z(.04),0,1);clf(o)});
+      msg=`Analisis simulasi selesai: ${st.o.length} objek, seed ${st.seed}`}
+    st.ran=1;st.busy=0;log(msg+", τ "+st.tau.toFixed(2));upd();toast(msg+". "+summ().F+" objek perlu review.")}};
+  t();
+}
+function nxt(){const L=st.o.filter(o=>inr(o)&&flag(o)&&st.f[cls(o)]);if(!st.ran||!L.length)return toast(st.ran?"Tidak ada objek terlihat yang perlu direview.":"Jalankan analisis terlebih dahulu.");const c=L.find(o=>o.id>(st.o[st.sel]?.id||0))||L[0];st.sel=st.o.indexOf(c);upd()}
+const hshC=async()=>{try{const d=$("#bc").getContext("2d").getImageData(0,0,W,H).data;st.hash=[...new Uint8Array(await crypto.subtle.digest("SHA-256",d))].map(b=>b.toString(16).padStart(2,"0")).join("")}catch(_){st.hash="tidak tersedia"}upd()};
+function load(i){st.src="syn";st.i=i;st.k=1;st.rect=[0,0,W,H];st.fw=W;st.fh=H;st.meta=null;st.sc=2;$("#sc").value=2;st.o=gen(i);st.ran=0;st.sel=-1;st.pts=[];st.cal=0;
+  $("#cb").textContent="Ukur skala (klik 2 titik pada citra)";$("#mode").textContent="Demo v3: citra sintetis, klasifikasi disimulasikan, bukan hasil eksperimen.";
+  st.hash="menghitung…";draw();log("Citra contoh dimuat: "+SM[i].n);upd();hshC()}
+
+/* ================= buka TIFF / PNG / JPG ================= */
+async function openFile(f){
+  const vr=$("#vr"),say=h=>{if(vr)vr.innerHTML=h};
+  if(!/\.(tiff?|png|jpe?g)$/i.test(f.name)){say(`<p class="er">Ditolak: ${esc(f.name)}. Gunakan TIFF, PNG, atau JPG.</p>`);return}
+  say(`<p class="mt">Membaca ${esc(f.name)}…</p>`);
+  try{
+    const buf=await f.arrayBuffer();let w,h,rgba,meta=null;
+    if(/\.tiff?$/i.test(f.name)){
+      if(!window.UTIF)throw new Error("Pustaka pembaca TIFF belum termuat (perlu koneksi internet).");
+      const ifds=UTIF.decode(buf);if(!ifds.length)throw new Error("TIFF tidak berisi halaman citra.");
+      const ifd=ifds.reduce((a,b)=>((b.t256?.[0]||0)*(b.t257?.[0]||0)>(a.t256?.[0]||0)*(a.t257?.[0]||0)?b:a));
+      UTIF.decodeImage(buf,ifd,ifds);rgba=UTIF.toRGBA8(ifd);w=ifd.width;h=ifd.height;
+      const xr=ifd.t282,un=ifd.t296?.[0];if(xr&&(un==3||un==2)){const v=Array.isArray(xr)?(xr.length==2?xr[0]/xr[1]:xr[0]):xr,ppcm=un==3?v:v/2.54;if(ppcm>0){const npx=1e7/ppcm;if(npx>=.01&&npx<=100)meta=npx}}
+    }else{const bmp=await createImageBitmap(new Blob([buf]));w=bmp.width;h=bmp.height;const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");x.drawImage(bmp,0,0);rgba=x.getImageData(0,0,w,h).data}
+    /* abu-abu + peregangan kontras persentil 0,5–99,5 (TEM 16-bit sering redup) */
+    const n=w*h,gy=new Float32Array(n),hs=new Uint32Array(256);
+    for(let i=0;i<n;i++){const v=.299*rgba[4*i]+.587*rgba[4*i+1]+.114*rgba[4*i+2];gy[i]=v;hs[v|0]++}
+    let lo=0,hi=255,c=0;for(let t=0;t<256;t++){c+=hs[t];if(c>=n*.005){lo=t;break}}c=0;for(let t=255;t>=0;t--){c+=hs[t];if(c>=n*.005){hi=t;break}}
+    const cv=document.createElement("canvas");cv.width=w;cv.height=h;const cx=cv.getContext("2d"),id=cx.createImageData(w,h),sp=255/Math.max(1,hi-lo);
+    for(let i=0;i<n;i++){const v=clamp((gy[i]-lo)*sp,0,255);id.data[4*i]=id.data[4*i+1]=id.data[4*i+2]=v;id.data[4*i+3]=255}cx.putImageData(id,0,0);
+    const fz=Math.min(W/w,H/h),dw=w*fz,dh=h*fz;
+    Object.assign(st,{src:"file",fn:f.name,fw:w,fh:h,img:cv,k:1/fz,rect:[(W-dw)/2,(H-dh)/2,dw,dh],meta,o:[],ran:0,sel:-1,pts:[],cal:0});
+    st.hash=[...new Uint8Array(await crypto.subtle.digest("SHA-256",buf))].map(b=>b.toString(16).padStart(2,"0")).join("");
+    $("#mode").textContent="Citra unggahan: deteksi klasik (Otsu + komponen terhubung), bukan FRU-Net terlatih. Atur skala dulu.";
+    draw();log(`Berkas dibuka: ${esc(f.name)} (${w}×${h} px, ${(f.size/1024).toFixed(0)} KB)`);upd();
+    say(`<p class="ok">Dibuka: ${esc(f.name)} · ${w}×${h} px · SHA-256 ${st.hash.slice(0,16)}…</p>${meta?`<p>Metadata TIFF menyarankan skala ${meta.toFixed(3)} nm/px. Periksa terhadap batang skala sebelum dipakai.</p>`:`<p class="mt">Tidak ada skala nm yang andal di metadata. Tetapkan skala dari batang skala (Panduan kalibrasi).</p>`}<div class="r"><button class="b p" data-x="1">Tutup</button></div>`);
+    toast("Citra dibuka. Tetapkan skala, lalu jalankan analisis.");
+  }catch(e){say(`<p class="er">Gagal membuka ${esc(f.name)}: ${esc(e.message||e)}</p>`);log("Gagal membuka "+esc(f.name))}
+}
+function upm(){mod("Buka citra TEM",`<div class="dz">Pilih berkas TIFF (8/16-bit, multi-halaman diambil yang terbesar), PNG, atau JPG<br><br><input type="file" id="fi" accept=".tif,.tiff,.png,.jpg,.jpeg,image/tiff,image/png,image/jpeg"></div><div id="vr" aria-live="polite"></div>
+  <p class="lg">Citra diproses di peramban ini dan tidak dikirim ke mana pun. Analisis citra unggahan memakai deteksi klasik sederhana pada resolusi tampilan (maksimal 960×620); vesikel yang sangat kecil pada citra besar bisa terlewat.</p>
+  <h3>Atau gunakan citra contoh sintetis</h3><div class="r">${SM.map((m,i)=>`<button class="b${st.src=="syn"&&i==st.i?" p":""}" data-s="${i}">${m.n}</button>`).join("")}</div>`);
+  $("#fi").onchange=e=>{const f=e.target.files[0];if(f)openFile(f)}}
+
+/* ================= kalibrasi ================= */
+const setsc=(v,src)=>{st.sc=clamp(Math.round(+v*1000)/1000||2,.01,50);$("#sc").value=st.sc;log("Skala diubah ke "+st.sc+" nm/px"+(src?" ("+src+")":""));upd()};
+function capm(px){mod("Terapkan hasil pengukuran skala",`<p>Jarak dua titik: <b>${px.toFixed(1)} piksel citra asli</b>. Masukkan panjang nyata yang diwakilinya.${st.src=="syn"?" (Pada citra contoh, batang skala putih di kiri bawah = 100 nm.)":""}</p><label>Panjang nyata (nm) <input class="num" type="number" id="cnn" value="100" min="1"></label><p class="lg">Ketelitian ±1 piksel pada panjang ini = ±${(100/px).toFixed(1)}% pada semua diameter.</p><div class="r"><button class="b p" id="cok">Terapkan</button><button class="b" data-x="1">Batal</button></div>`);
+  $("#cok").onclick=()=>{const v=+$("#cnn").value;if(!(v>0))return toast("Isi panjang nyata.");st.pts=[];setsc(v/px,"ukur dua titik");cl();toast("Skala diterapkan: "+st.sc+" nm/px.")}}
+function calm(){mod("Panduan kalibrasi skala (nm per piksel)",`<p>Diameter (nm) = diameter (piksel citra asli) × nm/piksel. Nilai ini paling menentukan akurasi ukuran.</p>
+  <h3>Alur kerja</h3><ol class="pl"><li>Cari batang skala (<i>scale bar</i>) pada citra, misalnya bertuliskan 100 nm atau 200 nm. Bila tersedia, bandingkan dengan nilai dari perangkat lunak mikroskop.</li><li>Klik <b>Ukur skala</b>, lalu klik kedua ujung batang skala. Jarak dihitung dalam piksel citra asli, meskipun tampilan diperkecil.</li><li>nm/piksel = panjang tertulis ÷ panjang piksel. Contoh: 200 nm ÷ 100 piksel = 2 nm/piksel.</li><li>Verifikasi dengan partikel standar berukuran diketahui bila ada, lalu jalankan analisis. Perubahan skala tercatat di jejak audit.</li></ol>
+  <p class="lg">Rekomendasi untuk EV: 0,5–3 nm/piksel. Pada 3 nm/px, vesikel 30 nm hanya 10 piksel, sehingga salah baca tepi 1 piksel = error ±10%. Metadata TIFF hanya disarankan, tidak otomatis dipakai, karena banyak berkas menyimpan resolusi cetak (dpi), bukan skala mikroskop.</p>
+  <h3>Kalkulator</h3><div class="r"><label style="margin:0">Panjang tertulis (nm) <input class="num" type="number" id="cnm" value="100"></label><label style="margin:0">Panjang (piksel asli) <input class="num" type="number" id="cpx" value="${(100/st.sc).toFixed(0)}"></label><button class="b" id="cgo">Hitung</button><span id="crs"></span></div>
+  <h3>Dampak galat skala</h3><table class="tbl"><tr><th>Galat skala</th><th>Galat diameter</th><th>Vesikel 100 nm terbaca</th><th>Galat konsentrasi</th></tr><tr><td>±5%</td><td>±5%</td><td>95–105 nm</td><td>±10%</td></tr><tr><td>±10%</td><td>±10%</td><td>90–110 nm</td><td>±20%</td></tr><tr><td>±20%</td><td>±20%</td><td>80–120 nm</td><td>±40%</td></tr></table>
+  <p class="lg">Galat skala bersifat sistematis: semua diameter bergeser dengan persen yang sama, sehingga objek dapat keluar-masuk rentang target. Estimasi konsentrasi memakai luas citra (skala²), sehingga galatnya kira-kira dua kali lipat.</p><div class="r" style="margin-top:8px"><button class="b p" data-x="1">Mengerti</button></div>`);
+  $("#cgo").onclick=()=>{const a=+$("#cnm").value,b=+$("#cpx").value;if(!(a>0&&b>0))return;const v=a/b;$("#crs").innerHTML=`= <b>${v.toFixed(3)} nm/px</b> <button class="b p" id="cap">Terapkan</button>`;$("#cap").onclick=()=>{setsc(v,"kalkulator");cl()}}}
+
+/* ================= ubah kategori ================= */
+function rlm(){const s=st.o[st.sel];if(!s)return;const k=cls(s);
+  mod("Ubah kategori objek #"+s.id,`<div>${CL.map((c,j)=>`<label class="rd"><input type="radio" name="k" value="${j}" ${j==k?"checked":""}> <b style="color:${CC[j]}">K${j+1} ${c}</b></label>`).join("")}</div><label>Catatan ahli (opsional)<textarea id="nt" rows="2"></textarea></label><div class="r" style="margin-top:8px"><button class="b p" id="sv">Simpan koreksi</button><button class="b" data-x="1">Batal</button></div>`);
+  $("#sv").onclick=()=>{const j=+document.querySelector("input[name=k]:checked").value,nt=$("#nt").value;s.fc=j;s.rv={u:"Analis (demo)",t:now()};log("Koreksi #"+s.id+": "+CL[k]+" → "+CL[j]+(nt?" ("+esc(nt)+")":""));cl();upd();toast("Koreksi disimpan.")}}
+
+/* ================= kriteria ================= */
+function kcm(){const S=summ();
+  mod("Kriteria klasifikasi kuantitatif",`<p>Aturan diterapkan berurutan; aturan pertama yang terpenuhi menentukan kategori. Nilai ambang adalah nilai kerja awal dan <b>belum divalidasi</b> pada citra nyata.</p>
+  <table class="tbl"><tr><th>Urutan</th><th>Kategori</th><th>Aturan</th></tr>
+  <tr><td>1</td><td><b style="color:${CC[2]}">K3 Artefak</b></td><td>kontras lumen &lt; ${f2(TH.lcA)} (objek pejal gelap tanpa lumen: endapan stain, debris)</td></tr>
+  <tr><td>2</td><td><b style="color:${CC[1]}">K2 Rusak</b></td><td>kontinuitas batas &lt; ${f2(TH.bcR)} (membran terputus) <b>atau</b> roundness &lt; ${f2(TH.rdR)} (kolaps/deformasi)</td></tr>
+  <tr><td>3</td><td><b style="color:${CC[0]}">K1 Utuh</b></td><td>roundness ≥ ${f2(TH.rdU)} <b>dan</b> kontinuitas batas ≥ ${f2(TH.bcU)}</td></tr>
+  <tr><td>4</td><td><b style="color:${CC[3]}">K4 Tidak pasti</b></td><td>sisanya (di antara ambang utuh dan rusak)</td></tr></table>
+  <h3>Kontinuitas batas: penuh, separuh, lemah</h3><p>Persen keliling yang tampak gelap: <b>penuh</b> ≥ ${f2(TH.bcF)}, <b>separuh</b> ${f2(TH.bcH)}–${f2(TH.bcF)}, <b>lemah</b> &lt; ${f2(TH.bcH)}. Semua tingkat tetap dideteksi dan dihitung. Batas separuh <b>tidak otomatis rusak</b>: pada TEM pewarnaan negatif, tepi sering tampak tidak penuh pada vesikel utuh. Objek baru dianggap rusak bila batasnya di bawah ${f2(TH.bcR)}.${st.ran?` Citra ini: ${S.full} penuh, ${S.half} separuh, ${S.weak} lemah.`:""}</p>
+  <h3>Tanda tambahan (bukan kategori)</h3><ul><li><b>Agregasi</b> (skor &gt; ${f2(TH.ag)}): tepi berdekatan atau menempel. Ditandai untuk review karena kedekatan saja belum tentu kerusakan.</li><li><b>Tekstur granular</b> (indeks &gt; ${f2(TH.tx)}): lumen tidak homogen, kemungkinan muatan obat atau protein. Bukan kerusakan.</li><li><b>Terpotong tepi citra</b>: ukuran mungkin kurang, keyakinan dibatasi 0,55.</li></ul>
+  <h3>Keyakinan</h3><p>Dihitung dari jarak nilai ke ambang terdekat yang menentukan kategori: makin dekat ke ambang, makin rendah. K4 selalu 0,45, sehingga selalu masuk antrean review pada τ default.</p>
+  <h3>Perbaikan dari v2</h3><ul class="lg"><li>v2 menghitung keyakinan dari label asli simulasi, bukan dari aturan. Sekarang dari aturan.</li><li>v2 memasukkan semua batas separuh ke Rusak; ini keliru untuk TEM. Sekarang batas separuh boleh Utuh.</li><li>v2 membedakan artefak hanya dari bentuk; sekarang dari ada tidaknya lumen.</li><li>Ambang di panel, label, dan laporan v2 tidak seragam (0,75 / 0,8 / 0,55). Sekarang satu set ambang dipakai di semua tempat.</li></ul>
+  <h3>Sampel bermembran lain</h3><p>Aturan yang sama dipakai untuk liposom/nanoemulsi dan sel; yang berubah hanya rentang target (preset Jenis sampel). Ambang per jenis sampel perlu disetel dengan data nyata.</p><button class="b p" data-x="1">Tutup</button>`)}
+
+/* ================= ekspor: Excel, PDF, CSV ================= */
+const base=()=>"EV-Morph-QC_"+nm().replace(/\.[^.]+$/,"").replace(/[^\w-]+/g,"_")+"_"+new Date().toISOString().slice(0,10);
+function rows(){return st.o.map(o=>({id:o.id,kategori:CL[cls(o)],kategori_model:CL[o.p],dikoreksi:o.fc!=null?1:0,diameter_nm:+dia(o).toFixed(1),dalam_rentang:inr(o)?1:0,roundness:+o.rd.toFixed(3),kontinuitas_batas:+o.bc.toFixed(3),tingkat_batas:bk(o),kontras_lumen:+o.lc.toFixed(3),skor_agregasi:+o.ag.toFixed(3),tekstur_lumen:+o.tx.toFixed(3),terpotong_tepi:o.edge?1:0,keyakinan:+o.cf.toFixed(3),perlu_review:inr(o)&&flag(o)?1:0,direview:o.rv?1:0,alasan:o.tr.join("; ")}))}
+function sumRows(){const S=summ();return[["Citra",nm()],["Sumber",st.src=="file"?"Berkas unggahan, deteksi klasik":"Citra sintetis, simulasi"],["Ukuran asli (px)",st.fw+" x "+st.fh],["Jenis sampel",JT[st.jt].n],["Skala (nm/px)",st.sc],["Rentang target (nm)",st.mn+"-"+st.mx],["Ambang keyakinan",st.tau],
+  ["Total partikel terdeteksi (1-1000 nm)",S.N],["Dalam rentang target",S.T],["% dalam rentang",+pct(S.T,S.N).toFixed(1)],...CL.map((c,k)=>[c+" (dalam rentang)",S.n[k]]),["D10 (nm)",+S.d10.toFixed(1)],["D50 (nm)",+S.d50.toFixed(1)],["D90 (nm)",+S.d90.toFixed(1)],
+  ["Batas penuh / separuh / lemah",S.full+" / "+S.half+" / "+S.weak],["Indikasi agregasi",S.ag],["Tekstur granular",S.tx],["Perlu review",S.F],["Sudah direview",S.rev],
+  ["Volume ke grid (uL)",st.cv.v],["Faktor pengenceran",st.cv.df],["Diameter grid (mm)",st.cv.gd],["Estimasi konsentrasi (partikel/mL)",sci(S.conc,1)],["Catatan konsentrasi","Estimasi orde besaran; gunakan NTA untuk nilai yang dilaporkan"],["SHA-256",st.hash],["Dibuat",new Date().toLocaleString("id-ID")],["Status","Demo; bukan hasil eksperimen tervalidasi"]]}
+let DLP=null;try{DLP=window.claude&&window.claude.use?window.claude.use("downloads"):null}catch(_){DLP=null}
+async function save(blob,name){let dl=null;try{dl=DLP?await DLP:null}catch(_){dl=null}
+  if(dl){try{await dl.save({filename:name,data:blob});log("Unduh "+name);upd();toast("Berkas disimpan: "+name)}catch(e){const c=e&&e.code;toast(c=="declined"?"Unduhan dibatalkan.":c=="rate_limited"?"Tunggu sebentar, lalu coba lagi.":"Unduhan tidak tersedia di tampilan ini.")}return}
+  try{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);log("Unduh "+name);upd()}catch(e){toast("Unduhan diblokir oleh peramban: "+e.message)}}
+function dlXlsx(){if(!st.ran)return toast("Jalankan analisis terlebih dahulu.");if(!window.XLSX)return toast("Pustaka Excel belum termuat (perlu internet).");
+  const wb=XLSX.utils.book_new(),ap=(n,ws)=>XLSX.utils.book_append_sheet(wb,ws,n);
+  ap("Ringkasan",XLSX.utils.aoa_to_sheet([["Parameter","Nilai"],...sumRows()]));
+  ap("Objek",XLSX.utils.json_to_sheet(rows()));
+  ap("Distribusi 100 nm",XLSX.utils.aoa_to_sheet([["Rentang (nm)","Partikel","%","% kumulatif","Target"],...dist().map(r=>[r.lo+"-"+r.hi,r.c,+r.p.toFixed(1),+r.cp.toFixed(1),r.tg?"ya":""])]));
+  ap("Kriteria",XLSX.utils.aoa_to_sheet([["Urutan","Kategori","Aturan"],[1,"Artefak","kontras lumen < "+TH.lcA],[2,"Rusak","batas < "+TH.bcR+" atau roundness < "+TH.rdR],[3,"Utuh","roundness >= "+TH.rdU+" dan batas >= "+TH.bcU],[4,"Tidak pasti","sisanya"]]));
+  ap("Jejak audit",XLSX.utils.aoa_to_sheet([["Waktu","Kejadian"],...st.log]));
+  try{const out=XLSX.write(wb,{bookType:"xlsx",type:"array"});save(new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),base()+".xlsx")}catch(e){toast("Gagal membuat Excel: "+e.message)}}
+const pdfT=s=>String(s).replace(/≥/g,">=").replace(/≤/g,"<=").replace(/τ/g,"tau").replace(/✓/g,"v").replace(/–/g,"-").replace(/µ/g,"u").replace(/[^\x20-\x7E\u00A0-\u00FF]/g,"");
+function dlPdf(){if(!st.ran)return toast("Jalankan analisis terlebih dahulu.");if(!window.jspdf)return toast("Pustaka PDF belum termuat (perlu internet).");
+  const{jsPDF}=window.jspdf,d=new jsPDF({unit:"mm",format:"a4"}),S=summ(),tb=(o)=>d.autoTable(Object.assign({styles:{fontSize:8,cellPadding:1.5},headStyles:{fillColor:[31,111,107]},margin:{left:14,right:14}},o));
+  d.setFontSize(15);d.text("Laporan QC EV-Morph QC",14,16);d.setFontSize(9);d.setTextColor(120,90,0);d.text(pdfT(st.src=="file"?"Citra unggahan dengan deteksi klasik (bukan model terlatih). Angka belum tervalidasi.":"Demo: citra sintetis dan klasifikasi disimulasikan. Bukan hasil eksperimen."),14,22);d.setTextColor(0);
+  tb({startY:26,head:[["Parameter","Nilai"]],body:sumRows().map(r=>r.map(pdfT))});
+  d.addPage();d.setFontSize(11);d.text(pdfT("Citra dengan overlay ("+nm()+")"),14,14);
+  const c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");x.drawImage($("#bc"),0,0);x.drawImage($("#ov"),0,0);d.addImage(c.toDataURL("image/jpeg",.85),"JPEG",14,18,182,182*H/W);
+  const hc=document.createElement("canvas");hc.width=900;hc.height=260;hist(hc,{bg:"#fff",tx:"#1C2B33",grid:"#D0DADD",band:"rgba(31,111,107,.12)"});
+  const y2=22+182*H/W;d.text("Distribusi diameter (bertumpuk per kategori)",14,y2+4);d.addImage(hc.toDataURL("image/png"),"PNG",14,y2+7,182,182*260/900);
+  d.setFontSize(8);d.text(CL.map(pdfT).join(" (hijau) | ").replace(/ \(hijau\) \| /,"=hijau, ").slice(0,0)+"Warna: Utuh hijau, Rusak oranye, Artefak magenta, Tidak pasti biru-toska.",14,y2+10+182*260/900);
+  d.addPage();d.setFontSize(11);d.text("Distribusi bertahap per 100 nm",14,14);
+  tb({startY:18,head:[["Rentang (nm)","Partikel","%","% kumulatif","Target"]],body:dist().map(r=>[r.lo+"-"+r.hi,r.c,r.p.toFixed(1),r.cp.toFixed(1),r.tg?"ya":""])});
+  tb({startY:d.lastAutoTable.finalY+8,head:[["Urutan","Kategori","Aturan"]],body:[["1","Artefak","kontras lumen < "+TH.lcA],["2","Rusak","batas < "+TH.bcR+" atau roundness < "+TH.rdR],["3","Utuh","roundness >= "+TH.rdU+" dan batas >= "+TH.bcU],["4","Tidak pasti","sisanya"]]});
+  d.addPage();d.setFontSize(11);d.text("Data per objek",14,14);
+  tb({startY:18,styles:{fontSize:7,cellPadding:1},head:[["#","Kategori","Diam. nm","Rentang","Round.","Batas","Lumen","Agreg.","Tekstur","Yakin","Review"]],body:rows().map(r=>[r.id,r.kategori+(r.dikoreksi?"*":""),r.diameter_nm,r.dalam_rentang?"ya":"",r.roundness.toFixed(2),r.kontinuitas_batas.toFixed(2),r.kontras_lumen.toFixed(2),r.skor_agregasi.toFixed(2),r.tekstur_lumen.toFixed(2),r.keyakinan.toFixed(2),r.perlu_review?"perlu":r.direview?"sudah":""])});
+  d.setFontSize(7);d.text("* dikoreksi ahli. SHA-256: "+st.hash.slice(0,32)+"...",14,d.lastAutoTable.finalY+5);
+  try{save(d.output("blob"),base()+".pdf")}catch(e){toast("Gagal membuat PDF: "+e.message)}}
+function dlCsv(){if(!st.ran)return toast("Jalankan analisis terlebih dahulu.");const R=rows(),k=Object.keys(R[0]||{id:0});save(new Blob(["\ufeff"+k.join(",")+"\n"+R.map(r=>k.map(c=>{const v=String(r[c]);return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")).join("\n")],{type:"text/csv"}),base()+".csv")}
+function dlm(){mod("Unduh data",`<p>Pilih format. Semua berkas dibuat di peramban ini.</p><div class="r"><button class="b p" id="dx">Excel (.xlsx)</button><button class="b p" id="dp">PDF (.pdf)</button><button class="b" id="dc">CSV (.csv)</button></div>
+  <ul class="lg"><li><b>Excel</b>: lembar Ringkasan, Objek, Distribusi 100 nm, Kriteria, Jejak audit.</li><li><b>PDF</b>: ringkasan, citra beroverlay, grafik distribusi, tabel distribusi, kriteria, data per objek.</li><li><b>CSV</b>: data per objek saja.</li></ul>
+  <p class="lg">Anda akan diminta mengonfirmasi setiap unduhan. Pustaka Excel dan PDF butuh koneksi internet saat halaman dimuat.</p>`);
+  $("#dx").onclick=dlXlsx;$("#dp").onclick=dlPdf;$("#dc").onclick=dlCsv}
+
+/* ================= laporan batch ================= */
+function rpm(){if(!st.ran)return toast("Jalankan analisis terlebih dahulu.");const S=summ(),p=k=>pct(S.n[k],S.T),
+  R=[["Vesikel utuh","≥ 70%",p(0).toFixed(0)+"%",p(0)>=70],["Vesikel rusak","≤ 15%",p(1).toFixed(0)+"%",p(1)<=15],["Tidak pasti","≤ 5%",p(3).toFixed(0)+"%",p(3)<=5],["Kappa terhadap ahli","≥ 0,60","Belum diukur",null],["Error diameter","≤ 10%","Belum diukur",null]],
+  D=S.F?"Perlu review":R.some(r=>r[3]===false)?"Gagal (kriteria terukur)":"Lulus (kriteria terukur)";log("Laporan batch dibuka. Keputusan: "+D);upd();
+  mod("Laporan QC batch",`<p><b>Keputusan: ${D}</b><br><span class="mt">${S.F?S.F+" objek masih ditandai. ":""}Alat bantu, bukan keputusan rilis.</span></p>
+  <table class="tbl"><tr><th>Kriteria</th><th>Ambang</th><th>Nilai</th><th>Status</th></tr>${R.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]===null?"Belum diukur":r[3]?"Memenuhi":"Tidak memenuhi"}</td></tr>`).join("")}</table>
+  <h3>Partikel dan konsentrasi</h3><table class="tbl"><tr><td>Total partikel terdeteksi (1–1000 nm)</td><td><b>${S.N}</b></td></tr><tr><td>Dalam rentang target ${st.mn}–${st.mx} nm</td><td><b>${S.T} (${pct(S.T,S.N).toFixed(1)}%)</b></td></tr><tr><td>D10 / D50 / D90</td><td>${S.d10.toFixed(0)} / ${S.d50.toFixed(0)} / ${S.d90.toFixed(0)} nm</td></tr><tr><td>Estimasi konsentrasi (orde besaran)</td><td><b>${sci(S.conc)} partikel/mL</b></td></tr></table>
+  <h3>Distribusi per 100 nm</h3><table class="tbl"><tr><th>Rentang</th><th>Partikel</th><th>%</th><th>% kumulatif</th></tr>${dist().map(r=>`<tr${r.tg?' class="rowh"':""}><td>${r.lo}–${r.hi}</td><td>${r.c}</td><td>${r.p.toFixed(1)}</td><td>${r.cp.toFixed(1)}</td></tr>`).join("")}</table>
+  <div class="r" style="margin-top:10px"><button class="b p" id="dx">Unduh Excel</button><button class="b p" id="dp">Unduh PDF</button><button class="b" id="dc">Unduh CSV</button><button class="b" data-x="1">Tutup</button></div>`);
+  $("#dx").onclick=dlXlsx;$("#dp").onclick=dlPdf;$("#dc").onclick=dlCsv}
+
+const abm=()=>mod("Tentang demo dan batasan",`<p>Demo EV-Morph QC v3 untuk Open Innovation Faculty 2026 (Tema 1: AI dan Big Data dalam Farmasi).</p>
+<h3>Baru di v3</h3><ul><li>Membuka berkas TIFF (8/16-bit), PNG, dan JPG dari komputer, dengan peregangan kontras otomatis.</li><li>Kriteria kategori diperbaiki dan dipakai seragam; alasan kategori ditampilkan per objek.</li><li>Total partikel, D10/D50/D90, dan estimasi konsentrasi partikel/mL.</li><li>Histogram bertumpuk per kategori dengan rentang otomatis.</li><li>Warna kategori kontras tinggi plus pola garis berbeda.</li><li>Unduh Excel, PDF, dan CSV.</li><li>Kotak kuning, cincin, label, dan objek di luar rentang dapat disembunyikan.</li></ul>
+<h3>Yang perlu diketahui</h3><ul><li><b>Citra contoh</b>: sintetis; ukuran dan kategori disimulasikan dengan seed tetap.</li><li><b>Citra unggahan</b>: dianalisis dengan deteksi klasik (ambang Otsu, isi lubang, komponen terhubung), bukan FRU-Net atau model few-shot terlatih. Vesikel yang bergerombol bisa terbaca sebagai satu objek. Hasil harus diperiksa ahli.</li><li>Ambang kriteria belum divalidasi. Angka tidak boleh dikutip sebagai hasil penelitian.</li><li>Konsentrasi adalah estimasi orde besaran; NTA tetap metode rujukan.</li></ul>
+<h3>Batasan produk</h3><ul><li>Bukan alat diagnosis klinis, bukan penilai muatan atau fungsi EV, dan bukan sertifikasi regulasi.</li><li>Tidak menggantikan NTA, flow cytometry, atau Western blot.</li></ul><button class="b p" data-x="1">Mengerti</button>`);
+
+/* ================= interaksi ================= */
+const pos=e=>{const r=$("#ov").getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]};
+const hit=e=>{if(!st.ran)return-1;const[x,y]=pos(e);let b=-1,d=1e9;st.o.forEach((o,i)=>{if(!msr(o)||!st.f[cls(o)])return;const q=Math.hypot(o.x-x,o.y-y);if(q<o.r+6&&q<d){b=i;d=q}});return b};
+$("#ov").onmousemove=e=>{const i=hit(e),t=$("#tip");if(i<0||st.cal){t.style.display="none";return}const o=st.o[i];t.textContent=`#${o.id} · ${inr(o)?CL[cls(o)]:"di luar rentang"} · ${dia(o).toFixed(0)} nm · batas ${bk(o)} ${f2(o.bc)} · keyakinan ${f2(o.cf)}`;Object.assign(t.style,{display:"block",left:e.clientX+12+"px",top:e.clientY+12+"px"})};
+$("#ov").onmouseleave=()=>$("#tip").style.display="none";
+$("#ov").onclick=e=>{if(st.cal){st.pts.push(pos(e));upd();if(st.pts.length==2){const d=Math.hypot(st.pts[0][0]-st.pts[1][0],st.pts[0][1]-st.pts[1][1])*st.k;st.cal=0;$("#cb").textContent="Ukur skala (klik 2 titik pada citra)";capm(Math.max(1,d))}return}const i=hit(e);if(i>=0){st.sel=i;upd()}};
+$("#chs").innerHTML=CL.map((c,k)=>`<button class="b chip" data-k="${k}" aria-pressed="true" title="Klik untuk menyembunyikan/menampilkan kategori"><i style="background:${CC[k]}"></i>${c} <b>0</b></button>`).join("");
+$("#chs").onclick=e=>{const b=e.target.closest(".chip");if(b){const k=+b.dataset.k;st.f[k]=st.f[k]?0:1;upd()}};
+$("#in").onclick=e=>{const s=st.o[st.sel];if(!s)return;if(e.target.id=="ap"){s.rv={u:"Analis (demo)",t:now()};log("Kategori #"+s.id+" disetujui: "+CL[cls(s)]);upd();toast("Kategori disetujui.")}if(e.target.id=="ub")rlm()};
+$("#sci").onclick=e=>{if(e.target.id=="mta"&&st.meta)setsc(st.meta,"metadata TIFF")};
+$("#sc").oninput=e=>{st.sc=clamp(+e.target.value||2,.01,50);upd()};$("#sc").onchange=e=>{log("Skala diubah ke "+e.target.value+" nm/px");upd()};
+$("#jt").onchange=e=>{const j=+e.target.value;st.jt=j;st.mn=JT[j].mn;st.mx=JT[j].mx;$("#mn").value=st.mn;$("#mx").value=st.mx;log("Jenis sampel: "+JT[j].n);upd()};
+[["mn",v=>st.mn=+v,"Rentang minimum"],["mx",v=>st.mx=+v,"Rentang maksimum"],["ta",v=>st.tau=v/100,"Ambang τ (x100)"]].forEach(([id,f,n])=>{const e=$("#"+id);e.oninput=()=>{f(e.value);upd()};e.onchange=()=>{log(n+" diubah ke "+e.value);upd()}});
+$("#se").oninput=e=>{st.se=e.target.value/100;upd()};$("#se").onchange=()=>{log("Sensitivitas deteksi "+st.se.toFixed(2)+" (jalankan ulang analisis)");toast("Jalankan ulang analisis untuk menerapkan sensitivitas.")};
+[["vb","box"],["vr","ring"],["vl","lab"],["vo","out"]].forEach(([id,k])=>$("#"+id).onchange=e=>{st.vis[k]=e.target.checked?1:0;upd()});
+[["cvv","v"],["cvd","df"],["cvg","gd"]].forEach(([id,k])=>$("#"+id).oninput=e=>{const v=+e.target.value;if(v>0){st.cv[k]=v;upd()}});
+$("#hr").onchange=e=>{st.hr=e.target.value;upd()};
+$("#cb").onclick=()=>{st.pts=[];st.cal=st.cal?0:1;$("#cb").textContent=st.cal?"Batalkan pengukuran":"Ukur skala (klik 2 titik pada citra)";if(st.cal)toast("Klik dua ujung batang skala pada citra.");upd()};
+$("#up").onclick=upm;$("#rn").onclick=run;$("#nx").onclick=nxt;$("#rp").onclick=rpm;$("#dlb").onclick=dlm;$("#kc").onclick=kcm;$("#kal").onclick=calm;$("#ab").onclick=abm;
+$("#mo").onclick=e=>{if(e.target.id=="mo"||e.target.dataset.x)cl()};
+$("#mb").onclick=e=>{const s=e.target.dataset.s;if(s!==undefined){load(+s);cl();toast("Citra contoh dimuat: "+SM[+s].n)}};
+document.onkeydown=e=>{if(e.key=="Escape")cl()};
+/* seret-lepas berkas ke citra */
+const cvw=$(".cv");cvw.ondragover=e=>{e.preventDefault()};cvw.ondrop=e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)openFile(f)};
+load(0);
+</script>
+</body>
+</html>
